@@ -145,8 +145,8 @@ void SyncPWM::analogWrite(byte value)
  */
 #if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328__) 
 ISR(TIMER2_COMPA_vect) {
-    byte signal = (*portInputRegister(port) & bit) << 1;
-    signal |= (*portInputRegister(port) & bit);
+    byte signal = ((*portInputRegister(port) & bit) != 0) << 1 ;
+    signal |= (*portInputRegister(port) & bit) != 0;
     switch (signal) {
         case 0b00:
 		case 0b01:
@@ -160,10 +160,8 @@ ISR(TIMER2_COMPA_vect) {
 }
 #elif defined(__AVR_ATmega32U4__)
 ISR(TIMER4_OVF_vect) {
-//     byte signal = (*portInputRegister(port) & bit) << 1;
-//     signal |= (*portInputRegister(port) & bit);
-    byte signal = (PINB & B00010000) >> 3;
-    signal |= (PINB & B00010000) >> 4;
+    byte signal = ((*portInputRegister(port) & bit) != 0) << 1 ;
+    signal |= (*portInputRegister(port) & bit) != 0;
     switch (signal) {
         case 0b00: 
         	// en retard ou opposition de phase, on diminue la période
