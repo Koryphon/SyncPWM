@@ -5,7 +5,9 @@
  * This library allows to use a PWM which is synchronized with the same
  * PWM of other Arduino.
  *
- * Currently timer2 is used so the PWM output is on pin 3
+ * Currently on ATMega328 timer2 is used so the PWM output is on pin 3
+ *
+ * Check the LICENSE file
  */
 
 #include "SyncPWM.h"
@@ -17,9 +19,14 @@ byte SyncPWM::syncPWMState = SPWM_NO_INIT;
 static uint8_t bit;
 static uint8_t port;
 
-const byte OCR2ANominalValue = 254;
+const byte OCRNominalValue = 254;
 
+unsigned long cnt00 = 0;
+unsigned long cnt01 = 0;
+unsigned long cnt10 = 0;
+unsigned long cnt11 = 0;
 
+#if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328__) 
 void SyncPWM::startPWM()
 {
     // setup  timer 2 in fast PWM with OCR2A as TOP
@@ -27,9 +34,33 @@ void SyncPWM::startPWM()
     pinMode(3,OUTPUT);
     TCCR2A = _BV(COM2B1) | _BV(WGM21) | _BV(WGM20);
     TCCR2B = _BV(WGM22) | _BV(CS22);
-    OCR2A = 254;
+    OCR2A = OCRNominalValue;
     OCR2B = 0;  /* PWM set to 0 */
 }
+#elif defined(__AVR_ATmega32U4__)
+void SyncPWM::startPWM()
+{
+    // setup  timer 4 in fast PWM 8 bits with OCR4C as TOP
+    // TC4H is set to 0 (8 bits mode) see page 131
+    // the PWM output is Arduino Leonardo pin 6 (OC4D)
+    pinMode(6,OUTPUT);
+    TCCR4B = 0;
+    TCCR4A = 0;
+    TCCR4C = 0;
+    TCCR4D = 0;
+    TCCR4E = 0;
+    TC4H = 0;
+    TCCR4A = _BV(PWM4A);
+    // prescaler to 64
+    TCCR4B = _BV(CS42) | _BV(CS41) | _BV(CS40);
+    TCCR4C = _BV(COM4D1) | _BV(PWM4D);
+    OCR4C = OCRNominalValue; /* TOP */
+    TCNT4 = 0; /* start the timer */
+    OCR4D = 0; /* PWM set to 0 */
+}
+#else
+#error "Unsupported Arduino"
+#endif
 
 /*
  * beginMasterClock starts the synchronization signal on pin 3
@@ -39,7 +70,14 @@ void SyncPWM::beginMasterClock()
 	if (syncPWMState == SPWM_NO_INIT) {
 		syncPWMState = SPWM_MASTER;
 		startPWM();
+#if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328__) 
 		OCR2B = 127; /* 50% */
+#elif defined(__AVR_ATmega32U4__)
+        OCR4D = 127; /* 50% */
+#else
+#error "Unsupported Arduino"
+#endif
+
 	}
 }
 
@@ -60,8 +98,15 @@ void SyncPWM::begin(const byte pin)
 		pinMode(pin,INPUT);
 		startPWM();
 		
+#if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328__) 
 		/* interrupt on compare match OCR2A */
         TIMSK2 = _BV(OCIE2A);
+#elif defined(__AVR_ATmega32U4__)
+		/* interrupt on overflow */
+        TIMSK4 = _BV(TOIE4);
+#else
+#error "Unsupported Arduino"
+#endif
 	}
 }
     
@@ -71,14 +116,24 @@ void SyncPWM::begin(const byte pin)
 void SyncPWM::analogWrite(byte value)
 {
     if (syncPWMState == SPMW_SLAVE) {
-	    if (value > OCR2ANominalValue) value = OCR2ANominalValue;
+	    if (value > OCRNominalValue) value = OCRNominalValue;
+#if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328__) 
 		OCR2B = value;
+#elif defined(__AVR_ATmega32U4__)
+        OCR4D = value;
+#else
+#error "Unsupported Arduino"
+#endif
 	}
 }
+
+
+
 
 /*
  * ISR
  */
+#if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328__) 
 ISR(TIMER2_COMPA_vect) {
     byte signal = (*portInputRegister(port) & bit) << 1;
     signal |= (*portInputRegister(port) & bit);
@@ -86,12 +141,40 @@ ISR(TIMER2_COMPA_vect) {
         case 0b00:
 		case 0b01:
         	// en retard ou opposition de phase, on diminue la période
-        	OCR2A = OCR2ANominalValue - 1;
+        	OCR2A = OCRNominalValue - 1;
         	break;
       	case 0b11:
         	// en avance, on augmente la periode
-        	OCR2A = OCR2ANominalValue + 1;
+        	OCR2A = OCRNominalValue + 1;
     }    
-    // acknowledge the interrupt
-    TIFR2 = _BV(OCF2A);
 }
+#elif defined(__AVR_ATmega32U4__)
+ISR(TIMER4_OVF_vect) {
+//     byte signal = (*portInputRegister(port) & bit) << 1;
+//     signal |= (*portInputRegister(port) & bit);
+    byte signal = (PINB & B00010000) >> 3;
+    signal |= (PINB & B00010000) >> 4;
+    switch (signal) {
+        case 0b00: 
+        	// en retard ou opposition de phase, on diminue la période
+        	OCR4C = OCRNominalValue - 1;
+        	cnt00++;
+        	break;
+		case 0b01:
+        	// en retard ou opposition de phase, on diminue la période
+        	OCR4C = OCRNominalValue - 1;
+        	cnt01++;
+        	break;
+      	case 0b11:
+        	// en avance, on augmente la periode
+        	OCR4C = OCRNominalValue + 1;
+        	cnt11++;
+        	break;
+        case 0b10:
+        	cnt10++;
+        	break;
+    }    
+}
+#else
+#error "Unsupported Arduino"
+#endif

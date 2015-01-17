@@ -5,7 +5,9 @@
  * This library allows to use a PWM which is synchronized with the same
  * PWM of other Arduino.
  *
- * Currently timer2 is used so the PWM output is on pin 3
+ * Currently on ATMega328 timer2 is used so the PWM output is on pin 3
+ * 
+ * Check the LICENSE file
  */
  
 #include "Arduino.h"
