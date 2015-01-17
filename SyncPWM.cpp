@@ -12,6 +12,15 @@
 
 #include "SyncPWM.h"
 
+
+#if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328__) 
+#define PWMPIN 3
+#elif defined(__AVR_ATmega32U4__)
+#define PWMPIN 6
+#else
+#error "Unsupported Arduino"
+#endif
+
 enum { SPWM_NO_INIT, SPWM_MASTER, SPMW_SLAVE };
 
 byte SyncPWM::syncPWMState = SPWM_NO_INIT;
@@ -89,7 +98,7 @@ void SyncPWM::beginMasterClock()
  */
 void SyncPWM::begin(const byte pin)
 {
-	if (syncPWMState == SPWM_NO_INIT && pin != 3) {
+	if (syncPWMState == SPWM_NO_INIT && pin != PWMPIN) {
         bit = digitalPinToBitMask(pin);
         port = digitalPinToPort(pin);
         if (port == NOT_A_PIN) return;
@@ -108,6 +117,7 @@ void SyncPWM::begin(const byte pin)
 #error "Unsupported Arduino"
 #endif
 	}
+	
 }
     
 /*
@@ -178,3 +188,13 @@ ISR(TIMER4_OVF_vect) {
 #else
 #error "Unsupported Arduino"
 #endif
+
+void SyncPWM::displayPortAddrAndMask()
+{
+    Serial.print("port=");
+    Serial.print(port);
+    Serial.print(" mask=");
+	Serial.print(bit);
+    Serial.print(" @=");
+	Serial.println((uint16_t)portInputRegister(port),HEX);
+}

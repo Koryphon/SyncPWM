@@ -38,4 +38,10 @@ class SyncPWM
      * analogWrite changed the value of the PWM
      */
     void analogWrite(byte value);
+    
+    /*
+     * displayPortAddrAndMask displays the port address and the bit mask
+     * used for the sync input pin
+     */
+    void displayPortAddrAndMask();
 };
