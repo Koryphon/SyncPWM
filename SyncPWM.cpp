@@ -1,13 +1,24 @@
 /*
  * SyncPWM library.
- * © Jean-Luc Béchennec 2015. Based on a design of Pierre Molinaro
+ *
+ * Copyright Jean-Luc Béchennec 2015. Based on a design of Pierre Molinaro
  * 
  * This library allows to use a PWM which is synchronized with the same
  * PWM of other Arduino.
  *
  * Currently on ATMega328 timer2 is used so the PWM output is on pin 3
  *
- * Check the LICENSE file
+ * This software is distributed under the GNU Public Licence v2 (GPLv2)
+ *
+ * Please read the LICENCE file
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 #include "SyncPWM.h"
@@ -109,7 +120,7 @@ void SyncPWM::begin(const byte pin)
 		
 #if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328__) 
 		/* interrupt on compare match OCR2A */
-        TIMSK2 = _BV(OCIE2A);
+        TIMSK2 = _BV(OCIE2A=$);
 #elif defined(__AVR_ATmega32U4__)
 		/* interrupt on overflow */
         TIMSK4 = _BV(TOIE4);
