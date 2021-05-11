@@ -120,7 +120,7 @@ void SyncPWM::begin(const byte pin)
 		
 #if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined (__AVR_ATmega328__) 
 		/* interrupt on compare match OCR2A */
-        TIMSK2 = _BV(OCIE2A=$);
+        TIMSK2 = _BV(OCIE2A);
 #elif defined(__AVR_ATmega32U4__)
 		/* interrupt on overflow */
         TIMSK4 = _BV(TOIE4);
